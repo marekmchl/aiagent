@@ -1,4 +1,5 @@
 import unittest
+from functions.get_file_content import get_file_content
 from functions.get_files_info import get_files_info
 
 
@@ -42,6 +43,28 @@ class TestGetFilesInfo(unittest.TestCase):
             """Result for '../' directory:
     Error: Cannot list "../" as it is outside the permitted working directory""",
         )
+
+
+class TestGetFileContent(unittest.TestCase):
+    def test_main(self):
+        result = get_file_content("calculator", "main.py")
+        print(result)
+        self.assertTrue("def main():" in result)
+
+    def test_pkg_calculator(self):
+        result = get_file_content("calculator", "pkg/calculator.py")
+        print(result)
+        self.assertTrue("def _apply_operator(self, operators, values)" in result)
+
+    def test_bin_cat(self):
+        result = get_file_content("calculator", "/bin/cat")
+        print(result)
+        self.assertTrue("Error: " in result)
+
+    def test_pkg_does_not_exist(self):
+        result = get_file_content("calculator", "pkg/does_not_exist.py")
+        print(result)
+        self.assertTrue("Error: " in result)
 
 
 if __name__ == "__main__":
