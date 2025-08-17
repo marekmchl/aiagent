@@ -2,6 +2,7 @@ import unittest
 from functions.get_file_content import get_file_content
 from functions.get_files_info import get_files_info
 from functions.write_file import write_file
+from functions.run_python import run_python_file
 
 
 class TestGetFilesInfo(unittest.TestCase):
@@ -84,6 +85,38 @@ class TestWriteFile(unittest.TestCase):
         result = write_file("calculator", "/tmp/temp.txt", "this should not be allowed")
         # print(result)
         self.assertTrue("Error: " in result)
+
+
+class TestRunPython(unittest.TestCase):
+    def test_calculator_main(self):
+        result = run_python_file("calculator", "main.py")
+        # print(result)
+        self.assertTrue("Calculator App" in result)
+        self.assertTrue('Usage: python main.py "<expression>"' in result)
+        self.assertTrue('Example: python main.py "3 + 5"' in result)
+
+    def test_calculator_main_3p5(self):
+        result = run_python_file("calculator", "main.py", ["3 + 5"])
+        # print(result)
+        self.assertTrue("3 + 5" in result)
+        self.assertTrue("=" in result)
+        self.assertTrue("8" in result)
+
+    def test_calculator_outside_err(self):
+        result = run_python_file("calculator", "tests.py")
+        # print(result)
+        self.assertTrue("Ran 9 tests in " in result)
+        self.assertTrue("OK" in result)
+
+    def test_calculator_nonexistent(self):
+        result = run_python_file("calculator", "../main.py")
+        # print(result)
+        self.assertTrue("Error:" in result)
+
+    def test_calculator_lorem(self):
+        result = run_python_file("calculator", "nonexistent.py")
+        # print(result)
+        self.assertTrue("Error:" in result)
 
 
 if __name__ == "__main__":
