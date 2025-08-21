@@ -3,6 +3,7 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from call_function import call_function
 
 
 def get_available_funcions():
@@ -112,7 +113,20 @@ All paths you provide should be relative to the working directory. You do not ne
             print(f"Response tokens: {res.usage_metadata.candidates_token_count}")
         if res.function_calls is not None:
             for function_call in res.function_calls:
-                print(f"Calling function: {function_call.name}({function_call.args})")
+                function_call_result = call_function(function_call, verbose)
+                if (
+                    function_call_result is not None
+                    and function_call_result.parts is not None
+                    and function_call_result.parts[0].function_response is not None
+                    and function_call_result.parts[0].function_response.response
+                    is not None
+                ):
+                    if verbose:
+                        print(
+                            f"-> {function_call_result.parts[0].function_response.response}"
+                        )
+                else:
+                    raise Exception("FATAL ERROR")
         elif res.text is not None:
             print(res.text)
 
