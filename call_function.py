@@ -16,7 +16,7 @@ def call_function(function_call_part, verbose=False):
     if verbose:
         print(f"Calling function: {function_call_part.name}({function_call_part.args})")
     else:
-        print(print(f" - Calling function: {function_call_part.name}"))
+        print(f" - Calling function: {function_call_part.name}")
 
     function = functions.get(function_call_part.name, None)
     if function is None:
