@@ -78,57 +78,81 @@ def get_available_funcions():
 
 
 def main():
-    load_dotenv()
-    api_key = os.environ.get("GEMINI_API_KEY")
+    try:
+        load_dotenv()
+        api_key = os.environ.get("GEMINI_API_KEY")
 
-    client = genai.Client(api_key=api_key)
+        client = genai.Client(api_key=api_key)
 
-    user_prompt = sys.argv[1] if len(sys.argv) >= 2 else sys.exit(1)
-    verbose = True if (len(sys.argv) >= 3 and sys.argv[2] == "--verbose") else False
-    system_prompt = """
-You are a helpful AI coding agent.
+        user_prompt = sys.argv[1] if len(sys.argv) >= 2 else sys.exit(1)
+        verbose = True if (len(sys.argv) >= 3 and sys.argv[2] == "--verbose") else False
+        system_prompt = """
+    You are a helpful AI coding agent.
 
-When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
+    When a user asks a question or makes a request, make a function call plan. You can perform the following operations:
 
-- List files and directories
+    - List files and directories
 
-All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
-"""
+    All paths you provide should be relative to the working directory. You do not need to specify the working directory in your function calls as it is automatically injected for security reasons.
+    """
 
-    messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)])]
-    available_funcions = get_available_funcions()
+        messages = [types.Content(role="user", parts=[types.Part(text=user_prompt)])]
+        available_funcions = get_available_funcions()
 
-    res = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(
-            tools=[available_funcions], system_instruction=system_prompt
-        ),
-    )
+        for _ in range(21):
+            res = client.models.generate_content(
+                model="gemini-2.0-flash-001",
+                contents=messages,
+                config=types.GenerateContentConfig(
+                    tools=[available_funcions], system_instruction=system_prompt
+                ),
+            )
 
-    if res is not None:
-        if res.usage_metadata is not None and verbose:
-            print(f"User prompt: {user_prompt}")
-            print(f"Prompt tokens: {res.usage_metadata.prompt_token_count}")
-            print(f"Response tokens: {res.usage_metadata.candidates_token_count}")
-        if res.function_calls is not None:
-            for function_call in res.function_calls:
-                function_call_result = call_function(function_call, verbose)
-                if (
-                    function_call_result is not None
-                    and function_call_result.parts is not None
-                    and function_call_result.parts[0].function_response is not None
-                    and function_call_result.parts[0].function_response.response
-                    is not None
-                ):
-                    if verbose:
-                        print(
-                            f"-> {function_call_result.parts[0].function_response.response}"
-                        )
-                else:
-                    raise Exception("FATAL ERROR")
-        elif res.text is not None:
-            print(res.text)
+            if res.candidates is not None:
+                for candidate in res.candidates:
+                    if candidate is not None and candidate.content is not None:
+                        messages.append(candidate.content)
+
+            if res is not None:
+                if res.usage_metadata is not None and verbose:
+                    print(f"User prompt: {user_prompt}")
+                    print(f"Prompt tokens: {res.usage_metadata.prompt_token_count}")
+                    print(
+                        f"Response tokens: {res.usage_metadata.candidates_token_count}"
+                    )
+                if res.function_calls is not None:
+                    for function_call in res.function_calls:
+                        function_call_result = call_function(function_call, verbose)
+                        if function_call_result is not None:
+                            messages.append(
+                                types.Content(
+                                    role="user", parts=function_call_result.parts
+                                )
+                            )
+
+                            if function_call_result.parts is not None:
+                                for function_part in function_call_result.parts:
+                                    if (
+                                        function_part.function_response is not None
+                                        and function_part.function_response.response
+                                        is not None
+                                        and verbose
+                                    ):
+                                        print(
+                                            f"-> {function_part.function_response.response}"
+                                        )
+                        else:
+                            raise Exception(
+                                "Function called but no result ever returned"
+                            )
+                elif res.text is not None:
+                    print(f"Final response:\n{res.text}")
+                    return
+        else:
+            raise Exception("Exceeded the allowed number of iterations")
+
+    except Exception as e:
+        print(f"Died with the error: {e}")
 
 
 if __name__ == "__main__":
